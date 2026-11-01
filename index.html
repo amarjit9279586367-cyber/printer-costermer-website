@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>QuickPrint Kiosk Pro - फोटो और स्मार्ट PDF प्रिंट कियोस्क</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Cropper.js CSS & JS CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+
+  <!-- jsPDF CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- PDF.js CDN (For High-Res Client-Side PDF Rendering & Password Unlock) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Custom CSS (File 2) -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen pb-28 select-none">
+
+  <!-- ==================== 1. STICKY HEADER, LIVE TOKEN & SHOPKEEPER QUEUE ==================== -->
+  <header class="sticky top-0 z-40 bg-indigo-950 text-white shadow-lg border-b border-indigo-800">
+    <div class="max-w-4xl mx-auto px-3 py-2.5 flex items-center justify-between gap-2">
+      <!-- App Title & Auto-Save Indicator -->
+      <div class="flex items-center gap-2">
+        <div class="bg-amber-400 text-indigo-950 font-black px-2.5 py-1 rounded-xl text-lg shadow">
+          🖨️
+        </div>
+        <div>
+          <h1 class="font-black text-sm sm:text-lg leading-tight tracking-wide flex items-center gap-1.5">
+            <span>QuickPrint Kiosk</span>
+            <span class="bg-indigo-700 text-amber-300 text-[10px] px-1.5 py-0.5 rounded font-bold">PRO</span>
+          </h1>
+          <div class="flex items-center gap-1.5 text-[11px] text-emerald-300 font-medium">
+            <span id="autoSaveDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="autoSaveStatusText">ऑटो-सेव चालू है (सुरक्षित)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Token + New Token + Live Orders Queue + Shop Settings -->
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <div class="bg-indigo-900/90 border border-indigo-500/60 px-2.5 py-1 rounded-xl flex items-center gap-1 shadow-inner">
+          <span class="text-[10px] text-indigo-200 uppercase font-bold">टोकन:</span>
+          <span id="liveTokenBadge" class="text-sm sm:text-lg font-black text-amber-400 tracking-wider">#01</span>
+        </div>
+
+        <button id="newTokenBtn" type="button"
+          class="bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-extrabold text-xs px-2.5 py-2 rounded-xl shadow flex items-center gap-1 transition">
+          <span>➕ नया टोकन</span>
+        </button>
+
+        <!-- Shopkeeper Live Queue Button -->
+        <button id="openQueueModalBtn" type="button" title="आज के लाइव ऑर्डर (Shopkeeper Queue)"
+          class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-extrabold text-xs px-2.5 py-2 rounded-xl shadow flex items-center gap-1 transition">
+          <span>📋 ऑर्डर</span>
+        </button>
+
+        <button id="openSettingsBtn" type="button" title="दुकानदार सेटिंग्स"
+          class="bg-indigo-800 hover:bg-indigo-700 active:scale-95 text-white p-2 rounded-xl border border-indigo-600 shadow transition text-sm">
+          ⚙️
+        </button>
+      </div>
+    </div>
+
+    <!-- Shopkeeper Edit Mode Banner (Shown when opened via ?token=XX) -->
+    <div id="shopkeeperModeBanner" class="hidden bg-amber-400 text-slate-950 px-3 py-1.5 text-center text-xs sm:text-sm font-extrabold border-t border-amber-500">
+      🛠️ दुकानदार एडिट मोड चालू है — आप ग्राहक का <span id="editingTokenLabel" class="underline font-black">टोकन #01</span> एडिट कर रहे हैं
+    </div>
+  </header>
+
+  <!-- ==================== MAIN KIOSK CONTAINER ==================== -->
+  <main class="max-w-4xl mx-auto px-3 pt-3 space-y-4">
+
+    <!-- ==================== 2. CUSTOMER NAME BOX ==================== -->
+    <section class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200">
+      <label for="customerNameInput" class="block text-xs sm:text-sm font-extrabold text-slate-700 mb-1.5">
+        👤 ग्राहक का नाम (Customer Name):
+      </label>
+      <div class="relative">
+        <input id="customerNameInput" type="text" placeholder="यहाँ अपना नाम लिखें (जैसे: राहुल कुमार)..."
+          class="w-full bg-slate-50 border-2 border-slate-300 focus:border-indigo-600 focus:bg-white rounded-xl px-3.5 py-2.5 text-sm sm:text-base font-bold text-slate-900 outline-none transition" />
+        <button id="clearNameBtn" type="button" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 font-bold text-sm">
+          ✖
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== 3. SEPARATE PDF STUDIO LAUNCHER CARD ==================== -->
+    <!-- Tapping anywhere on this card opens the dedicated Full-Screen PDF Edit Studio Window! -->
+    <section class="bg-gradient-to-r from-rose-600 via-red-600 to-orange-600 rounded-2xl p-4 text-white shadow-lg border-2 border-rose-400/40">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div class="space-y-1">
+          <div class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase tracking-wider">
+            <span>📄 अलग स्मार्ट PDF स्टूडियो विंडो</span>
+          </div>
+          <h2 class="text-base sm:text-lg font-black leading-snug">
+            PDF फाइल प्रिंट या एडिट करें (एडमिट कार्ड, सरकारी कार्ड, नोट्स, बिल)
+          </h2>
+          <p class="text-xs text-rose-100 font-medium">
+            यहाँ टैप करते ही अलग **PDF Edit Window** खुलेगी: पासवर्ड अनलॉक, पेज सेलेक्टर, टेक्स्ट एडिटर, ऑटो कार्ड कटर और 2-in-1 प्रिंट!
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2 w-full sm:w-auto shrink-0">
+          <button id="openPdfStudioWindowBtn" type="button"
+            class="w-full sm:w-auto bg-white hover:bg-amber-50 active:scale-95 text-rose-700 font-black text-xs sm:text-sm px-4 py-3 rounded-xl shadow-xl flex items-center justify-center gap-2 transition">
+            <span>📂 PDF स्टूडियो खोलें (Open PDF Window)</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 4. PHOTO UPLOAD & DIRECT CAMERA + SIGNATURE + TEXT TOOL ==================== -->
+    <section class="space-y-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+        <!-- CARD 1: FRONT PHOTO -->
+        <div class="bg-white rounded-2xl p-3.5 shadow-sm border-2 border-indigo-100 flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="bg-indigo-100 text-indigo-800 font-extrabold text-xs px-2.5 py-1 rounded-lg">स्टेप 1</span>
+              <h2 class="font-extrabold text-sm sm:text-base text-slate-800">पहली फोटो (Front)</h2>
+            </div>
+            <span id="frontStatusBadge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+              अपलोड नहीं है
+            </span>
+          </div>
+
+          <!-- Thumbnail Preview Box -->
+          <div id="frontThumbBox" class="hidden mb-2.5 bg-slate-50 border border-slate-200 rounded-xl p-2 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <img id="frontThumbImg" src="" alt="Front" class="w-12 h-12 object-contain rounded-lg border bg-white" />
+              <div class="text-xs">
+                <p class="font-bold text-emerald-700">✅ पहली फोटो तैयार है</p>
+                <button type="button" onclick="window.recropSlot('front')" class="text-indigo-600 font-bold underline mt-0.5">
+                  ✂️ फिर से क्रॉप करें
+                </button>
+              </div>
+            </div>
+            <button type="button" onclick="window.removeSlotPhoto('front')" class="text-red-600 hover:bg-red-50 p-1.5 rounded-lg font-bold text-xs">
+              🗑️ हटाएं
+            </button>
+          </div>
+
+          <!-- Upload & Camera Buttons -->
+          <div class="grid grid-cols-2 gap-2">
+            <label class="cursor-pointer bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-900 border border-indigo-200 font-bold text-xs sm:text-sm py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 text-center transition shadow-sm">
+              <span>📁 गैलरी से चुनें</span>
+              <input id="frontGalleryInput" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" class="hidden" />
+            </label>
+
+            <button type="button" onclick="window.openDirectCamera('front')"
+              class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs sm:text-sm py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 text-center transition shadow">
+              <span>📷 कैमरा खोलें</span>
+            </button>
+            <input id="frontCameraFallbackInput" type="file" accept="image/*" capture="environment" class="hidden" />
+          </div>
+        </div>
+
+        <!-- CARD 2: BACK PHOTO (OPTIONAL) -->
+        <div class="bg-white rounded-2xl p-3.5 shadow-sm border-2 border-slate-200 flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="bg-slate-100 text-slate-700 font-extrabold text-xs px-2.5 py-1 rounded-lg">स्टेप 2</span>
+              <h2 class="font-extrabold text-sm sm:text-base text-slate-800">दूसरी फोटो (Back - वैकल्पिक)</h2>
+            </div>
+            <span id="backStatusBadge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+              वैकल्पिक
+            </span>
+          </div>
+
+          <!-- Thumbnail Preview Box -->
+          <div id="backThumbBox" class="hidden mb-2.5 bg-slate-50 border border-slate-200 rounded-xl p-2 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <img id="backThumbImg" src="" alt="Back" class="w-12 h-12 object-contain rounded-lg border bg-white" />
+              <div class="text-xs">
+                <p class="font-bold text-emerald-700">✅ दूसरी फोटो तैयार है</p>
+                <button type="button" onclick="window.recropSlot('back')" class="text-indigo-600 font-bold underline mt-0.5">
+                  ✂️ फिर से क्रॉप करें
+                </button>
+              </div>
+            </div>
+            <button type="button" onclick="window.removeSlotPhoto('back')" class="text-red-600 hover:bg-red-50 p-1.5 rounded-lg font-bold text-xs">
+              🗑️ हटाएं
+            </button>
+          </div>
+
+          <!-- Upload & Camera Buttons -->
+          <div class="grid grid-cols-2 gap-2">
+            <label class="cursor-pointer bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 border border-slate-300 font-bold text-xs sm:text-sm py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 text-center transition shadow-sm">
+              <span>📁 गैलरी से चुनें</span>
+              <input id="backGalleryInput" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" class="hidden" />
+            </label>
+
+            <button type="button" onclick="window.openDirectCamera('back')"
+              class="bg-slate-800 hover:bg-slate-900 active:scale-95 text-white font-bold text-xs sm:text-sm py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 text-center transition shadow">
+              <span>📷 कैमरा खोलें</span>
+            </button>
+            <input id="backCameraFallbackInput" type="file" accept="image/*" capture="environment" class="hidden" />
+          </div>
+        </div>
+
+      </div>
+
+      <!-- SIGNATURE + TEXT EDIT TOOL + EXTRA PHOTO BAR -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        <button id="openSignatureModalBtn" type="button"
+          class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-98 text-white font-extrabold text-xs sm:text-sm py-3 px-3 rounded-2xl shadow-md flex items-center justify-center gap-1.5 transition">
+          <span>✍️ साइन जोड़ें (स्क्रीन/कॉपी)</span>
+        </button>
+
+        <button id="openTextToolModalBtn" type="button"
+          class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 active:scale-98 text-white font-extrabold text-xs sm:text-sm py-3 px-3 rounded-2xl shadow-md flex items-center justify-center gap-1.5 transition">
+          <span>🔤 टेक्स्ट लिखें / सुधारें (Text Tool)</span>
+        </button>
+
+        <label class="cursor-pointer w-full bg-white hover:bg-slate-50 active:scale-98 text-indigo-800 border-2 border-dashed border-indigo-300 font-bold text-xs sm:text-sm py-3 px-3 rounded-2xl flex items-center justify-center gap-1.5 transition">
+          <span>➕ अतिरिक्त फोटो जोड़ें</span>
+          <input id="extraPhotoInput" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" class="hidden" />
+        </label>
+      </div>
+    </section>
+
+    <!-- ==================== 5. 5 SMART DOCUMENT LAYOUTS, PAPER SIZE & SAFE MARGIN ==================== -->
+    <section class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200 space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="font-extrabold text-sm sm:text-base text-slate-800 flex items-center gap-1.5">
+          <span>📐 5 स्मार्ट डॉक्यूमेंट लेआउट चुनें:</span>
+        </h2>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Safe Print Margin Switch -->
+          <label class="inline-flex items-center gap-1.5 cursor-pointer bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-xl text-xs font-extrabold text-emerald-900">
+            <input id="safeMarginToggle" type="checkbox" checked class="w-4 h-4 accent-emerald-600 rounded" />
+            <span>🛡️ प्रिंटर सेफ मार्जिन (5mm)</span>
+          </label>
+
+          <!-- Paper Size Selector -->
+          <div class="flex items-center gap-1">
+            <select id="paperSizeSelect"
+              class="bg-indigo-50 border border-indigo-200 text-indigo-950 font-bold text-xs rounded-xl px-2.5 py-1.5 outline-none">
+              <option value="a4-portrait">A4 सीधा (Portrait)</option>
+              <option value="a4-landscape">A4 आड़ा (Landscape)</option>
+              <option value="4x6">4x6 फोटो पेपर</option>
+              <option value="legal">Legal साइज़</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5 Smart Layout Buttons -->
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-2" id="layoutButtonsContainer">
+        <button type="button" data-layout="id-vertical"
+          class="layout-btn active-layout border-2 border-indigo-600 bg-indigo-50 text-indigo-950 font-bold text-xs py-2.5 px-2 rounded-xl flex flex-col items-center justify-center gap-1 text-center transition">
+          <span class="text-base">↕️</span>
+          <span>आईडी/पैन (ऊपर-नीचे)</span>
+        </button>
+
+        <button type="button" data-layout="id-horizontal"
+          class="layout-btn border-2 border-slate-200 hover:border-indigo-300 bg-slate-50 text-slate-800 font-bold text-xs py-2.5 px-2 rounded-xl flex flex-col items-center justify-center gap-1 text-center transition">
+          <span class="text-base">↔️</span>
+          <span>आईडी साइड-बाय-साइड</span>
+        </button>
+
+        <button type="button" data-layout="passbook"
+          class="layout-btn border-2 border-slate-200 hover:border-indigo-300 bg-slate-50 text-slate-800 font-bold text-xs py-2.5 px-2 rounded-xl flex flex-col items-center justify-center gap-1 text-center transition">
+          <span class="text-base">🏦</span>
+          <span>बैंक पासबुक (चौड़ा)</span>
+        </button>
+
+        <button type="button" data-layout="full-a4"
+          class="layout-btn border-2 border-slate-200 hover:border-indigo-300 bg-slate-50 text-slate-800 font-bold text-xs py-2.5 px-2 rounded-xl flex flex-col items-center justify-center gap-1 text-center transition">
+          <span class="text-base">📄</span>
+          <span>पूरा A4 पेज फिट</span>
+        </button>
+
+        <button type="button" data-layout="passport"
+          class="layout-btn col-span-2 sm:col-span-1 border-2 border-slate-200 hover:border-indigo-300 bg-slate-50 text-slate-800 font-bold text-xs py-2.5 px-2 rounded-xl flex flex-col items-center justify-center gap-1 text-center transition">
+          <span class="text-base">👔</span>
+          <span>पासपोर्ट फोटो मेकर</span>
+        </button>
+      </div>
+
+      <!-- Passport Photo Maker Sub-Panel -->
+      <div id="passportMakerPanel" class="hidden bg-indigo-50/80 border-2 border-indigo-200 rounded-xl p-3 space-y-2.5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span class="text-xs sm:text-sm font-extrabold text-indigo-950">👔 पासपोर्ट साइज़ फोटो सेटिंग (1 क्लिक में):</span>
+          <div class="flex items-center gap-1.5">
+            <button type="button" onclick="window.setPassportCount(6)" id="ppCount6"
+              class="pp-count-btn bg-indigo-600 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow">
+              6 फोटो
+            </button>
+            <button type="button" onclick="window.setPassportCount(8)" id="ppCount8"
+              class="pp-count-btn bg-white text-indigo-900 border border-indigo-300 font-bold text-xs px-3 py-1.5 rounded-lg">
+              8 फोटो
+            </button>
+            <button type="button" onclick="window.setPassportCount(12)" id="ppCount12"
+              class="pp-count-btn bg-white text-indigo-900 border border-indigo-300 font-bold text-xs px-3 py-1.5 rounded-lg">
+              12 फोटो
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1">फोटो के नीचे नाम (Name on Photo):</label>
+            <input id="passportTextName" type="text" placeholder="जैसे: RAHUL KUMAR (वैकल्पिक)"
+              class="w-full bg-white border border-indigo-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-900 outline-none focus:border-indigo-600" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1">फोटो के नीचे तारीख (Date of Photo):</label>
+            <input id="passportTextDate" type="text" placeholder="जैसे: DOP: 01/11/2026 (वैकल्पिक)"
+              class="w-full bg-white border border-indigo-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-900 outline-none focus:border-indigo-600" />
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <button type="button" onclick="window.applyPassportLayout()"
+            class="bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs px-4 py-2 rounded-lg shadow">
+            ✨ पासपोर्ट फोटो पेज पर लगाएं
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 6. MULTI-PAGE BAR & LOCK / FULLSCREEN CONTROLS ==================== -->
+    <section class="bg-white rounded-2xl p-3 shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-2">
+      <!-- Page Navigation -->
+      <div class="flex items-center gap-1.5">
+        <button id="prevPageBtn" type="button"
+          class="bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-800 font-extrabold text-xs px-2.5 py-2 rounded-xl border border-slate-300 transition">
+          ◀
+        </button>
+        <div class="bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold text-slate-800">
+          पेज <span id="currentPageIndexLabel">1</span> / <span id="totalPagesCountLabel">1</span>
+        </div>
+        <button id="nextPageBtn" type="button"
+          class="bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-800 font-extrabold text-xs px-2.5 py-2 rounded-xl border border-slate-300 transition">
+          ▶
+        </button>
+
+        <button id="addNewPageBtn" type="button"
+          class="bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 font-extrabold text-xs px-2.5 py-2 rounded-xl transition">
+          + नया A4 पेज जोड़ें
+        </button>
+
+        <button id="deleteCurrentPageBtn" type="button" title="वर्तमान पेज हटाएं"
+          class="hidden bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold text-xs px-2.5 py-2 rounded-xl transition">
+          🗑️ पेज हटाएं
+        </button>
+      </div>
+
+      <!-- Page Lock & Fullscreen Preview Buttons -->
+      <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+        <button id="togglePageLockBtn" type="button"
+          class="flex-1 sm:flex-initial bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 font-extrabold text-xs px-3 py-2 rounded-xl flex items-center justify-center gap-1 transition shadow-sm">
+          <span id="pageLockIcon">🔓</span>
+          <span id="pageLockText">पेज लॉक करें</span>
+        </button>
+
+        <button id="openFullscreenPreviewBtn" type="button"
+          class="flex-1 sm:flex-initial bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs px-3 py-2 rounded-xl flex items-center justify-center gap-1 transition shadow">
+          <span>🖥️ फुल-स्क्रीन प्रीव्यू देखें</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== 7. LARGE LIVE A4 CANVAS PREVIEW ==================== -->
+    <section class="bg-slate-200/80 rounded-2xl p-2 sm:p-4 border-2 border-slate-300 shadow-inner flex flex-col items-center">
+      <div class="w-full max-w-2xl flex items-center justify-between text-[11px] sm:text-xs font-bold text-slate-600 mb-2 px-1">
+        <span>👆 फोटो/टेक्स्ट/साइन को उंगली से खिसकाएं या नीले कोनों से छोटा-बड़ा करें</span>
+        <span id="canvasPaperDimensionLabel" class="text-indigo-700 font-extrabold">A4 Portrait (210×297 mm)</span>
+      </div>
+
+      <div id="canvasViewportWrapper" class="w-full flex justify-center items-center overflow-hidden py-1">
+        <div id="canvasContainer" class="relative bg-white shadow-2xl border border-slate-300 transition-all duration-150">
+          <canvas id="kioskCanvas" width="1240" height="1754" class="block w-full h-full"></canvas>
+
+          <div id="canvasLockedBadge" class="hidden pointer-events-none absolute top-3 right-3 bg-amber-500/95 text-white font-extrabold text-xs px-3 py-1 rounded-full shadow-lg flex items-center gap-1">
+            🔒 पेज लॉक है (स्क्रॉल सुरक्षित)
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 8. SELECTED ITEM EDITING CONTROLS (PHOTO / SIGN / TEXT) ==================== -->
+    <section id="itemControlPanel" class="bg-white rounded-2xl p-3.5 shadow-md border-2 border-indigo-200 space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+          <h3 id="selectedItemTitle" class="font-extrabold text-xs sm:text-sm text-slate-800">
+            कंट्रोल टूल (कैनवास पर किसी फोटो, साइन या टेक्स्ट को छूकर चुनें)
+          </h3>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+          <!-- Edit Text Button (Visible when a Text box item is selected) -->
+          <button id="editSelectedTextBtn" type="button"
+            class="hidden bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs px-3 py-1.5 rounded-xl shadow">
+            ✏️ टेक्स्ट बदलें
+          </button>
+
+          <!-- Default Unchecked Border Checkbox -->
+          <label class="inline-flex items-center gap-1.5 cursor-pointer bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800">
+            <input id="itemBorderCheckbox" type="checkbox" class="w-4 h-4 accent-indigo-600 rounded" />
+            <span>फोटो बॉर्डर (काली लाइन)</span>
+          </label>
+
+          <!-- RED DELETE BUTTON -->
+          <button id="deleteSelectedItemBtn" type="button"
+            class="bg-red-600 hover:bg-red-700 active:scale-95 text-white font-extrabold text-xs sm:text-sm px-3 py-1.5 rounded-xl shadow flex items-center gap-1 transition">
+            <span>🗑️ हटाएं (Delete)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Row 2: Size Slider + '➖ छोटा करें' and '➕ बड़ा करें' Buttons -->
+      <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200 space-y-2">
+        <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+          <span>🔍 साइज़ (छोटा-बड़ा करें):</span>
+          <span id="itemScaleValueLabel" class="text-indigo-700 font-extrabold">100%</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="scaleDownBtn" type="button"
+            class="bg-white hover:bg-slate-100 active:scale-95 text-slate-900 border border-slate-300 font-extrabold text-xs px-3 py-2 rounded-xl shadow-sm shrink-0">
+            ➖ छोटा करें
+          </button>
+
+          <input id="itemScaleSlider" type="range" min="15" max="250" value="100"
+            class="w-full accent-indigo-600 h-2 bg-slate-200 rounded-lg cursor-pointer" />
+
+          <button id="scaleUpBtn" type="button"
+            class="bg-white hover:bg-slate-100 active:scale-95 text-slate-900 border border-slate-300 font-extrabold text-xs px-3 py-2 rounded-xl shadow-sm shrink-0">
+            ➕ बड़ा करें
+          </button>
+        </div>
+      </div>
+
+      <!-- Row 3: Quick Action Tools (90° Rotate, Center, Full A4 Fit, Recrop) -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <button id="rotate90Btn" type="button"
+          class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 font-bold text-xs py-2.5 px-2 rounded-xl border border-slate-300 flex items-center justify-center gap-1">
+          <span>🔄 90° घुमाएं</span>
+        </button>
+
+        <button id="centerAlignBtn" type="button"
+          class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 font-bold text-xs py-2.5 px-2 rounded-xl border border-slate-300 flex items-center justify-center gap-1">
+          <span>🎯 बीच में करें</span>
+        </button>
+
+        <button id="fitFullA4Btn" type="button"
+          class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 font-bold text-xs py-2.5 px-2 rounded-xl border border-slate-300 flex items-center justify-center gap-1">
+          <span>📄 पूरा A4 फिट करें</span>
+        </button>
+
+        <button id="recropSelectedBtn" type="button"
+          class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-900 font-bold text-xs py-2.5 px-2 rounded-xl border border-indigo-200 flex items-center justify-center gap-1">
+          <span>✂️ फिर से काटें</span>
+        </button>
+      </div>
+
+      <!-- Row 4: '✨ कागज़ साफ करें' (Scanner Brightness / Contrast Sliders) -->
+      <div class="bg-amber-50/70 rounded-xl p-3 border border-amber-200 space-y-2.5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span class="text-xs font-extrabold text-amber-950 flex items-center gap-1">
+            ✨ कागज़ साफ करें (स्कैनर ब्राइटनेस और कंट्रास्ट):
+          </span>
+          <div class="flex items-center gap-1.5">
+            <button id="magicScannerCleanBtn" type="button"
+              class="bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-[11px] px-2.5 py-1 rounded-lg shadow-sm">
+              ✨ ऑटो साफ करें
+            </button>
+            <button id="resetScannerFilterBtn" type="button"
+              class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold text-[11px] px-2 py-1 rounded-lg">
+              रीसेट
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <div class="flex justify-between text-[11px] font-bold text-slate-700 mb-1">
+              <span>☀️ चमक (Brightness):</span>
+              <span id="brightnessValLabel">100%</span>
+            </div>
+            <input id="itemBrightnessSlider" type="range" min="50" max="180" value="100"
+              class="w-full accent-amber-600 h-2 bg-amber-200 rounded-lg cursor-pointer" />
+          </div>
+
+          <div>
+            <div class="flex justify-between text-[11px] font-bold text-slate-700 mb-1">
+              <span>🌗 साफ अक्षर (Contrast):</span>
+              <span id="contrastValLabel">100%</span>
+            </div>
+            <input id="itemContrastSlider" type="range" min="50" max="220" value="100"
+              class="w-full accent-amber-600 h-2 bg-amber-200 rounded-lg cursor-pointer" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 9. PRINT MODE (COLOR / B&W), COPIES, UPI QR & DOWNLOADS ==================== -->
+    <section class="bg-white rounded-2xl p-4 shadow-md border-2 border-slate-200 space-y-4">
+      <h2 class="font-extrabold text-sm sm:text-base text-slate-800">
+        🎨 प्रिंट का रंग, कुल पैसे और पेमेंट:
+      </h2>
+
+      <!-- Color vs Black & White Selection Cards -->
+      <div class="grid grid-cols-2 gap-3">
+        <button id="selectColorModeBtn" type="button"
+          class="print-mode-card active-mode border-2 border-indigo-600 bg-indigo-50/70 rounded-2xl p-3 text-left transition flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-xl">🌈</span>
+            <span class="bg-indigo-600 text-white text-xs font-extrabold px-2 py-0.5 rounded-full">₹<span id="colorRateLabel">20</span>/पेज</span>
+          </div>
+          <div class="mt-2">
+            <p class="font-extrabold text-sm sm:text-base text-slate-900">कलर प्रिंट (₹20)</p>
+            <p class="text-[11px] text-slate-600 font-medium">असली रंगीन साफ प्रिंट</p>
+          </div>
+        </button>
+
+        <button id="selectBwModeBtn" type="button"
+          class="print-mode-card border-2 border-slate-200 bg-slate-50 rounded-2xl p-3 text-left transition flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-xl">⚫</span>
+            <span class="bg-slate-800 text-white text-xs font-extrabold px-2 py-0.5 rounded-full">₹<span id="bwRateLabel">10</span>/पेज</span>
+          </div>
+          <div class="mt-2">
+            <p class="font-extrabold text-sm sm:text-base text-slate-900">ब्लैक & व्हाइट (₹10)</p>
+            <p class="text-[11px] text-slate-600 font-medium">फोटोकॉपी जैसा काला-सफेद</p>
+          </div>
+        </button>
+      </div>
+
+      <!-- Copies Counter & Total Price Summary -->
+      <div class="bg-slate-900 text-white rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <span class="text-xs sm:text-sm font-bold text-slate-300">कॉपी की संख्या:</span>
+          <div class="flex items-center bg-slate-800 rounded-xl border border-slate-700 p-1">
+            <button id="decreaseCopiesBtn" type="button"
+              class="w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 active:scale-95 font-black text-base flex items-center justify-center">
+              ➖
+            </button>
+            <span id="copiesCountLabel" class="px-3.5 font-black text-base sm:text-lg text-amber-400">1</span>
+            <button id="increaseCopiesBtn" type="button"
+              class="w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 active:scale-95 font-black text-base flex items-center justify-center">
+              ➕
+            </button>
+          </div>
+        </div>
+
+        <div class="text-right">
+          <p id="priceBreakdownText" class="text-[11px] text-slate-400 font-medium">1 पेज × 1 कॉपी × ₹20</p>
+          <p class="text-lg sm:text-xl font-black text-emerald-400">
+            कुल पैसे: ₹<span id="totalPriceValue">20</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Dynamic UPI Payment QR Box (Shown automatically if Shopkeeper saves UPI ID in Settings) -->
+      <div id="upiPaymentCard" class="hidden bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <img id="upiQrImage" src="" alt="UPI QR" class="w-20 h-20 rounded-xl border bg-white p-1 shadow-sm" />
+          <div>
+            <span class="bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full">💸 SCAN & PAY UPI</span>
+            <h4 class="font-extrabold text-sm text-slate-900 mt-1">कुल भुगतान: ₹<span id="upiAmountText">20</span></h4>
+            <p class="text-xs text-slate-600 font-semibold">UPI ID: <span id="upiIdDisplay" class="font-bold text-indigo-800"></span></p>
+          </div>
+        </div>
+        <a id="upiDeepLinkBtn" href="#"
+          class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl text-center shadow">
+          📱 PhonePe / GPay से ₹<span id="upiBtnAmount">20</span> पे करें
+        </a>
+      </div>
+
+      <!-- 3 LARGE DOWNLOAD / PRINT BUTTONS -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+        <button id="downloadPdfBtn" type="button"
+          class="bg-rose-600 hover:bg-rose-700 active:scale-98 text-white font-extrabold text-xs sm:text-sm py-3.5 px-3 rounded-xl shadow flex items-center justify-center gap-1.5 transition">
+          <span>📄 पीडीएफ डाउनलोड करें (DOWNLOAD PDF)</span>
+        </button>
+
+        <button id="downloadJpgBtn" type="button"
+          class="bg-sky-600 hover:bg-sky-700 active:scale-98 text-white font-extrabold text-xs sm:text-sm py-3.5 px-3 rounded-xl shadow flex items-center justify-center gap-1.5 transition">
+          <span>🖼️ फोटो डाउनलोड (JPG)</span>
+        </button>
+
+        <button id="directPrintBtn" type="button"
+          class="bg-indigo-700 hover:bg-indigo-800 active:scale-98 text-white font-extrabold text-xs sm:text-sm py-3.5 px-3 rounded-xl shadow flex items-center justify-center gap-1.5 transition">
+          <span>🖨️ सीधा प्रिंट निकालें</span>
+        </button>
+      </div>
+
+      <!-- BIG GREEN WHATSAPP SEND BUTTON -->
+      <button id="sendWhatsAppPrintBtn" type="button"
+        class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-black text-base sm:text-lg py-4 px-4 rounded-2xl shadow-xl border-b-4 border-emerald-800 flex items-center justify-center gap-2 transition">
+        <span>📲 प्रिंट भेजें (₹<span id="whatsappBtnPrice">20</span>) - सीधा WhatsApp पर</span>
+      </button>
+    </section>
+
+  </main>
+
+  <!-- ======================================================================= -->
+  <!-- ======= DEDICATED FULL-SCREEN PDF STUDIO WINDOW (SEPARATE WINDOW) ===== -->
+  <!-- ======================================================================= -->
+  <div id="pdfStudioWindow" class="fixed inset-0 z-50 hidden bg-slate-900 text-white flex flex-col overflow-hidden">
+
+    <!-- Top Header of PDF Studio Window -->
+    <div class="bg-slate-950 border-b border-slate-800 px-3 sm:px-5 py-3 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5">
+        <span class="bg-rose-600 text-white p-2 rounded-xl text-base font-black shadow">📄</span>
+        <div>
+          <h2 class="font-black text-sm sm:text-lg text-white leading-tight">स्मार्ट PDF एडिट स्टूडियो (PDF Studio Window)</h2>
+          <p id="pdfFileMetaSubtitle" class="text-[11px] text-slate-400 font-medium">
+            PDF अपलोड करें • पेज चुनें • काटें • टेक्स्ट सुधारें • 2-in-1 या आईडी कार्ड बनाएं
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <label class="cursor-pointer bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-extrabold text-xs sm:text-sm px-3.5 py-2 rounded-xl shadow flex items-center gap-1.5 transition">
+          <span>📁 नई PDF फाइल चुनें</span>
+          <input id="pdfStudioFileInput" type="file" accept=".pdf,application/pdf" class="hidden" />
+        </label>
+
+        <button id="closePdfStudioWindowBtn" type="button"
+          class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-extrabold text-xs sm:text-sm px-3.5 py-2 rounded-xl border border-slate-700">
+          ✖ मुख्य पेज पर लौटें
+        </button>
+      </div>
+    </div>
+
+    <!-- PDF Studio Dedicated Toolbar (Only PDF Edit & Smart Tools) -->
+    <div class="bg-slate-900 border-b border-slate-800 px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2">
+      <!-- Page Selection Tools -->
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button id="pdfSelectAllBtn" type="button"
+          class="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs px-2.5 py-1.5 rounded-lg border border-slate-700">
+          ☑️ सारे पेज चुनें
+        </button>
+        <button id="pdfSelectFirstBtn" type="button"
+          class="bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs px-2.5 py-1.5 rounded-lg border border-slate-700">
+          1️⃣ सिर्फ पहला पेज
+        </button>
+        <button id="pdfDeselectAllBtn" type="button"
+          class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs px-2.5 py-1.5 rounded-lg border border-slate-700">
+          🔲 सब हटाएं
+        </button>
+
+        <div class="flex items-center bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 gap-1.5">
+          <span class="text-[11px] text-slate-400 font-bold">पेज रेंज:</span>
+          <input id="pdfRangeInput" type="text" placeholder="जैसे: 1-3, 5"
+            class="bg-transparent text-white text-xs font-bold w-24 outline-none" />
+          <button id="applyPdfRangeBtn" type="button" class="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold px-2 py-0.5 rounded">
+            लागू करें
+          </button>
+        </div>
+      </div>
+
+      <!-- PDF Dedicated Edit Tools (Auto ID Cutter, 2-in-1, Text Edit on PDF) -->
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button id="pdfAutoIdCardCutBtn" type="button"
+          class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs px-3 py-1.5 rounded-lg shadow flex items-center gap-1">
+          <span>🪪 ऑटो सरकारी कार्ड कटर (ID Cutter)</span>
+        </button>
+
+        <button id="pdfTwoInOneImportBtn" type="button"
+          class="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs px-3 py-1.5 rounded-lg shadow flex items-center gap-1">
+          <span>📑 1 A4 पर 2 पेज (2-in-1 माइक्रो)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Body of PDF Studio Window -->
+    <div class="flex-1 overflow-y-auto p-4">
+      <!-- Empty State when no PDF is loaded yet -->
+      <div id="pdfStudioEmptyState" class="h-full min-h-[55vh] flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-4">
+        <div class="w-20 h-20 rounded-3xl bg-rose-500/20 border-2 border-rose-500/40 flex items-center justify-center text-4xl shadow-inner">
+          📄
+        </div>
+        <h3 class="text-lg sm:text-xl font-black text-white">अपनी PDF फाइल यहाँ अपलोड करें</h3>
+        <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+          एडमिट कार्ड, पैन/ई-श्रम कार्ड, बिजली बिल, बैंक स्टेटमेंट या 50 पेज के नोट्स — किसी भी PDF को खोलें, पासवर्ड अनलॉक करें, किसी भी पेज को क्रॉप या टेक्स्ट एडिट करें!
+        </p>
+        <label class="cursor-pointer bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-black text-sm sm:text-base px-6 py-3.5 rounded-2xl shadow-xl flex items-center gap-2 transition">
+          <span>📂 फोन से PDF फाइल चुनें (.pdf)</span>
+          <input id="pdfStudioCenterFileInput" type="file" accept=".pdf,application/pdf" class="hidden" />
+        </label>
+      </div>
+
+      <!-- Password Protected PDF Unlock Box (Shown automatically if PDF is encrypted) -->
+      <div id="pdfPasswordBox" class="hidden max-w-md mx-auto my-10 bg-slate-950 border-2 border-amber-500 rounded-3xl p-5 text-center space-y-3 shadow-2xl">
+        <div class="text-3xl">🔐</div>
+        <h4 class="font-black text-base text-amber-400">यह PDF पासवर्ड से लॉक है!</h4>
+        <p class="text-xs text-slate-300">कृपया इस PDF को खोलने के लिए इसका पासवर्ड (जैसे जन्मतिथि/पिन) लिखें:</p>
+        <input id="pdfPasswordInput" type="password" placeholder="यहाँ PDF पासवर्ड डालें..."
+          class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-bold text-white outline-none focus:border-amber-400" />
+        <button id="unlockPdfPasswordBtn" type="button"
+          class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-sm py-2.5 rounded-xl shadow">
+          🔓 PDF अनलॉक करें
+        </button>
+      </div>
+
+      <!-- Loaded PDF Pages Grid (Thumbnails + Individual Page Edit Tools) -->
+      <div id="pdfPagesGrid" class="hidden grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
+    </div>
+
+    <!-- Bottom Action Bar of PDF Studio Window -->
+    <div class="bg-slate-950 border-t border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="text-xs sm:text-sm font-bold text-slate-300">
+        चुने गए पेज: <span id="pdfSelectedCountBadge" class="text-amber-400 font-black">0</span> पेज
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+        <button id="importSelectedPdfPagesBtn" type="button"
+          class="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-slate-950 font-black text-xs sm:text-sm px-5 py-3 rounded-xl shadow-lg flex items-center justify-center gap-1.5 transition">
+          <span>✅ चुने गए PDF पेज मुख्य कैनवास पर लाएं (Import Full A4)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- ==================== OTHER MODALS (TEXT, QUEUE, CROP, SIG, ETC.) ====== -->
+  <!-- ======================================================================= -->
+
+  <!-- 1. TEXT EDIT & WHITEOUT ERASER TOOL MODAL (🔤 टेक्स्ट लिखें / पुराना मिटाकर लिखें) -->
+  <div id="textToolModal" class="fixed inset-0 z-50 hidden bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-3">
+    <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="bg-indigo-900 text-white px-4 py-3 flex items-center justify-between">
+        <h3 class="font-extrabold text-base">🔤 टेक्स्ट जोड़ें या पुराना अक्षर ढकें (Text & Whiteout)</h3>
+        <button id="closeTextToolModalBtn" type="button" class="bg-indigo-800 px-2.5 py-1 rounded-lg text-xs font-bold">✖</button>
+      </div>
+
+      <div class="p-4 space-y-3.5">
+        <div>
+          <label class="block text-xs font-extrabold text-slate-700 mb-1">यहाँ अपना टेक्स्ट लिखें (नाम, तारीख, मोबाइल नंबर, नोट आदि):</label>
+          <textarea id="customTextInput" rows="2" placeholder="यहाँ लिखें... (अगर सिर्फ सफेद पट्टी/Whiteout चाहिए तो खाली छोड़ें)"
+            class="w-full bg-slate-50 border-2 border-slate-300 focus:border-indigo-600 rounded-xl px-3 py-2 text-sm font-bold text-slate-900 outline-none"></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">अक्षर का रंग (Text Color):</label>
+            <select id="customTextColorSelect" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-2 text-xs font-bold">
+              <option value="#000000">⚫ गहरा काला (Black)</option>
+              <option value="#1d4ed8">🔵 नीला पेन (Blue)</option>
+              <option value="#dc2626">🔴 लाल (Red)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">पीछे का बैकग्राउंड (Whiteout):</label>
+            <select id="customTextBgSelect" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-2 text-xs font-bold">
+              <option value="whiteout">⬜ सफेद पट्टी (पुराना अक्षर छुपाएं)</option>
+              <option value="transparent">🏁 पारदर्शी (Transparent)</option>
+            </select>
+          </div>
+        </div>
+
+        <label class="inline-flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
+          <input id="customTextBoldCheckbox" type="checkbox" checked class="w-4 h-4 accent-indigo-600 rounded" />
+          <span>अक्षरों को मोटा (Bold) रखें</span>
+        </label>
+
+        <button id="saveTextToCanvasBtn" type="button"
+          class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm py-3 rounded-xl shadow">
+          ✅ पेज पर लगाएं
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. SHOPKEEPER LIVE ORDERS QUEUE DASHBOARD MODAL (📋 आज के ऑर्डर) -->
+  <div id="queueModal" class="fixed inset-0 z-50 hidden bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-3">
+    <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
+      <div class="bg-indigo-950 text-white px-4 py-3 flex items-center justify-between">
+        <div>
+          <h3 class="font-extrabold text-base text-amber-400">📋 आज के लाइव प्रिंट ऑर्डर (Shopkeeper Queue)</h3>
+          <p class="text-[11px] text-indigo-200">किसी भी टोकन पर क्लिक करके सीधा अपनी स्क्रीन पर खोलें और प्रिंट निकालें</p>
+        </div>
+        <button id="closeQueueModalBtn" type="button" class="bg-indigo-800 px-2.5 py-1 rounded-lg text-xs font-bold">✖</button>
+      </div>
+
+      <div class="p-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between">
+        <span id="queueCountText" class="text-xs font-extrabold text-slate-700">आज के कुल टोकन: 0</span>
+        <button id="refreshQueueBtn" type="button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow">
+          🔄 लिस्ट रिफ्रेश करें
+        </button>
+      </div>
+
+      <div id="queueListContainer" class="p-3 overflow-y-auto space-y-2 flex-1">
+        <p class="text-center text-xs text-slate-500 py-8">लोड हो रहा है...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 2-STEP LOCKED CROPPER MODAL -->
+  <div id="cropModal" class="fixed inset-0 z-50 hidden bg-slate-950/90 backdrop-blur-sm flex flex-col justify-between p-3">
+    <div class="bg-slate-900 text-white rounded-2xl px-4 py-2.5 flex items-center justify-between border border-slate-800">
+      <div>
+        <h3 class="font-extrabold text-sm sm:text-base text-amber-400">✂️ 2-स्टेप लॉक क्रॉपर (फोटो/PDF पेज काटें)</h3>
+        <p class="text-[11px] text-emerald-300 font-medium">🔒 पीछे की फोटो जाम (Lock) है — सिर्फ नीले कोने खींचकर सेट करें</p>
+      </div>
+      <button id="closeCropModalBtn" type="button" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-xl font-bold text-xs">
+        ✖ बंद करें
+      </button>
+    </div>
+
+    <div class="relative flex-1 my-2 bg-black rounded-2xl overflow-hidden flex items-center justify-center border border-slate-800">
+      <img id="cropperTargetImage" src="" alt="Crop Target" class="max-w-full max-h-[68vh] block" />
+    </div>
+
+    <div class="bg-slate-900 text-white rounded-2xl p-3 border border-slate-800 space-y-2.5">
+      <div class="flex items-center justify-center gap-2">
+        <button id="cropRotateLeftBtn" type="button"
+          class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-slate-700">
+          ↺ -90° घुमाएं
+        </button>
+        <button id="cropRotateRightBtn" type="button"
+          class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-slate-700">
+          ↻ +90° घुमाएं
+        </button>
+        <button id="cropResetBoxBtn" type="button"
+          class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-amber-300 font-bold text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-slate-700">
+          पूरा बॉक्स खोलें
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2.5">
+        <button id="cancelCropBtn" type="button"
+          class="bg-slate-700 hover:bg-slate-600 text-white font-bold text-sm py-3 rounded-xl">
+          रद्द करें
+        </button>
+        <button id="applyCropBtn" type="button"
+          class="bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-sm sm:text-base py-3 rounded-xl shadow-lg">
+          ✅ काटें और पेज पर लगाएं
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. DUAL SIGNATURE MODAL -->
+  <div id="signatureModal" class="fixed inset-0 z-50 hidden bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-3 overflow-y-auto">
+    <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
+      <div class="bg-indigo-900 text-white px-4 py-3 flex items-center justify-between">
+        <h3 class="font-extrabold text-base">✍️ डिजिटल साइन (Signature) जोड़ें</h3>
+        <button id="closeSignatureModalBtn" type="button" class="bg-indigo-800 hover:bg-indigo-700 px-2.5 py-1 rounded-lg text-xs font-bold">
+          ✖ बंद करें
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 bg-slate-100 p-1.5 gap-1.5 border-b border-slate-200">
+        <button id="tabDrawSignBtn" type="button"
+          class="bg-indigo-600 text-white font-extrabold text-xs sm:text-sm py-2.5 rounded-xl shadow transition">
+          (क) 📱 स्क्रीन पर साइन करें
+        </button>
+        <button id="tabPaperSignBtn" type="button"
+          class="bg-white text-slate-700 font-extrabold text-xs sm:text-sm py-2.5 rounded-xl border border-slate-200 transition">
+          (ख) 📄 कॉपी के साइन की फोटो
+        </button>
+      </div>
+
+      <div id="drawSignTabContent" class="p-4 space-y-3">
+        <div class="flex items-center justify-between text-xs font-bold text-slate-600">
+          <span>नीचे खाली बॉक्स में उंगली से साइन करें:</span>
+          <div class="flex items-center gap-2">
+            <span>पेन का रंग:</span>
+            <button type="button" onclick="window.setSigPenColor('#0f172a')" class="w-5 h-5 rounded-full bg-slate-900 ring-2 ring-offset-1 ring-slate-900"></button>
+            <button type="button" onclick="window.setSigPenColor('#1d4ed8')" class="w-5 h-5 rounded-full bg-blue-700"></button>
+          </div>
+        </div>
+
+        <div class="border-2 border-dashed border-indigo-300 rounded-2xl bg-white overflow-hidden">
+          <canvas id="signaturePadCanvas" width="600" height="240" class="w-full h-44 touch-none cursor-crosshair"></canvas>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <button id="clearSigPadBtn" type="button"
+            class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs sm:text-sm py-2.5 rounded-xl border border-slate-300">
+            🧹 साफ करें (Clear)
+          </button>
+          <button id="addDrawnSigToPageBtn" type="button"
+            class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm py-2.5 rounded-xl shadow">
+            ✅ साइन पेज पर जोड़ें
+          </button>
+        </div>
+      </div>
+
+      <div id="paperSignTabContent" class="hidden p-4 space-y-3">
+        <p class="text-xs font-bold text-slate-600">
+          कागज़ या कॉपी पर किए गए साइन की फोटो चुनें या खींचें (पीछे का कागज़ अपने-आप हटकर पारदर्शी हो जाएगा):
+        </p>
+
+        <div class="grid grid-cols-2 gap-2">
+          <label class="cursor-pointer bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 font-bold text-xs py-2.5 px-3 rounded-xl text-center">
+            📁 गैलरी से साइन चुनें
+            <input id="paperSigGalleryInput" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" class="hidden" />
+          </label>
+          <button type="button" onclick="window.openDirectCamera('signature')"
+            class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 px-3 rounded-xl text-center shadow">
+            📷 कैमरे से साइन खींचें
+          </button>
+          <input id="paperSigCameraFallbackInput" type="file" accept="image/*" capture="environment" class="hidden" />
+        </div>
+
+        <div id="paperSigProcessBox" class="hidden space-y-3 pt-1">
+          <div class="checkerboard-bg border-2 border-indigo-200 rounded-2xl p-2 flex items-center justify-center h-36 overflow-hidden">
+            <canvas id="processedSigPreviewCanvas" class="max-h-full max-w-full object-contain"></canvas>
+          </div>
+
+          <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-1.5">
+            <div class="flex justify-between text-xs font-bold text-slate-700">
+              <span>🖋️ पेन की स्याही साफ व गाढ़ा करें:</span>
+              <span id="sigInkSliderValue" class="text-indigo-700 font-extrabold">55%</span>
+            </div>
+            <input id="sigInkDarknessSlider" type="range" min="15" max="90" value="55"
+              class="w-full accent-indigo-600 h-2 bg-slate-200 rounded-lg cursor-pointer" />
+          </div>
+
+          <button id="addPaperSigToPageBtn" type="button"
+            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm py-3 rounded-xl shadow">
+            ✅ पारदर्शी साइन पेज पर लगाएं
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. DIRECT REAR CAMERA MODAL -->
+  <div id="liveCameraModal" class="fixed inset-0 z-50 hidden bg-black flex flex-col justify-between p-3">
+    <div class="flex items-center justify-between text-white px-2 py-1">
+      <span class="font-extrabold text-sm text-amber-400">📷 सीधा कैमरा (कागज़ को साफ रोशनी में रखें)</span>
+      <button id="closeLiveCameraBtn" type="button" class="bg-slate-800 text-white px-3 py-1.5 rounded-xl text-xs font-bold">
+        ✖ बंद करें
+      </button>
+    </div>
+
+    <div class="relative flex-1 my-2 rounded-2xl overflow-hidden bg-slate-900 flex items-center justify-center">
+      <video id="liveCameraVideo" autoplay playsinline class="max-h-full max-w-full object-contain"></video>
+      <div class="pointer-events-none absolute inset-6 border-2 border-dashed border-amber-400/80 rounded-2xl"></div>
+    </div>
+
+    <div class="flex items-center justify-center py-2">
+      <button id="capturePhotoBtn" type="button"
+        class="bg-white text-slate-950 font-black text-sm sm:text-base px-8 py-3.5 rounded-full shadow-xl border-4 border-amber-400 active:scale-95 transition">
+        📸 फोटो खींचें (Capture)
+      </button>
+    </div>
+  </div>
+
+  <!-- 6. FULL-SCREEN DESKTOP PREVIEW MODAL -->
+  <div id="fullscreenPreviewModal" class="fixed inset-0 z-50 hidden bg-slate-950/95 flex items-center justify-center p-2 sm:p-6 overflow-auto">
+    <button id="closeFullscreenPreviewBtn" type="button"
+      class="fixed top-4 right-4 z-50 bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs sm:text-sm px-4 py-2 rounded-full shadow-2xl">
+      ✖ बाहर निकलें
+    </button>
+    <img id="fullscreenPreviewImage" src="" alt="Full Screen A4 Preview"
+      class="max-w-full max-h-[95vh] object-contain bg-white shadow-2xl rounded" />
+  </div>
+
+  <!-- 7. SHOPKEEPER SETTINGS MODAL (⚙️ WHATSAPP NUMBER, UPI ID & RATES) -->
+  <div id="settingsModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3">
+    <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="bg-indigo-900 text-white px-4 py-3 flex items-center justify-between">
+        <h3 class="font-extrabold text-base">⚙️ दुकानदार सेटिंग्स (Shopkeeper)</h3>
+        <button id="closeSettingsModalBtn" type="button" class="bg-indigo-800 px-2.5 py-1 rounded-lg text-xs font-bold">
+          ✖
+        </button>
+      </div>
+
+      <div class="p-4 space-y-3.5">
+        <div>
+          <label class="block text-xs font-extrabold text-slate-700 mb-1">
+            📱 दुकानदार का 10 अंकों का WhatsApp नंबर:
+          </label>
+          <input id="shopkeeperWhatsappInput" type="tel" maxlength="10" placeholder="जैसे: 9876543210"
+            class="w-full bg-slate-50 border-2 border-slate-300 focus:border-indigo-600 rounded-xl px-3 py-2 text-sm font-extrabold text-slate-900 outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-extrabold text-slate-700 mb-1">
+            💸 दुकानदार की UPI ID (QR पेमेंट के लिए - वैकल्पिक):
+          </label>
+          <input id="shopkeeperUpiInput" type="text" placeholder="जैसे: 9876543210@ybl या shop@paytm"
+            class="w-full bg-slate-50 border-2 border-slate-300 focus:border-indigo-600 rounded-xl px-3 py-2 text-sm font-bold text-slate-900 outline-none" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">🌈 कलर रेट (₹/पेज):</label>
+            <input id="settingColorRateInput" type="number" value="20" min="1"
+              class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">⚫ B&W रेट (₹/पेज):</label>
+            <input id="settingBwRateInput" type="number" value="10" min="1"
+              class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold" />
+          </div>
+        </div>
+
+        <button id="saveSettingsBtn" type="button"
+          class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm py-3 rounded-xl shadow">
+          💾 सेटिंग सेव करें
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. LOADING OVERLAY -->
+  <div id="loadingOverlay" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center text-white p-4">
+    <div class="w-12 h-12 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mb-3"></div>
+    <p id="loadingOverlayText" class="font-extrabold text-base text-center">कृपया प्रतीक्षा करें...</p>
+  </div>
+
+  <!-- Scripts (Files 3, 4 & 5) -->
+  <script src="canvas-engine.js"></script>
+  <script src="pdf-studio.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
