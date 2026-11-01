@@ -1,0 +1,266 @@
+/* ============================================================================
+ * FILE 2: style.css (QuickPrint Kiosk Pro V2.0)
+ * Custom Styling, Paper Aspect Ratios, Touch-Scroll Lock, PDF Studio Grid,
+ * Blue Cropper Handles, Checkerboard Transparency & Direct Print (@media print)
+ * ============================================================================ */
+
+/* ==================== 1. BASE TYPOGRAPHY & TOUCH BEHAVIOR ==================== */
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: 'Noto Sans Devanagari', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #f1f5f9;
+  color: #1e293b;
+  overflow-x: hidden;
+}
+
+.active\:scale-98:active {
+  transform: scale(0.98);
+}
+
+.active\:scale-95:active {
+  transform: scale(0.95);
+}
+
+/* ==================== 2. LIVE CANVAS CONTAINER & PAPER ASPECT RATIOS ==================== */
+#canvasContainer {
+  width: 100%;
+  max-width: 540px;
+  aspect-ratio: 210 / 297;
+  background-color: #ffffff;
+  position: relative;
+  margin: 0 auto;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 20px 35px -10px rgba(15, 23, 42, 0.28), 0 0 0 1px rgba(148, 163, 184, 0.5);
+}
+
+/* Paper Size Aspect Ratio Modifiers */
+#canvasContainer.paper-a4-portrait {
+  max-width: 540px;
+  aspect-ratio: 210 / 297;
+}
+
+#canvasContainer.paper-a4-landscape {
+  max-width: 680px;
+  aspect-ratio: 297 / 210;
+}
+
+#canvasContainer.paper-4x6 {
+  max-width: 460px;
+  aspect-ratio: 102 / 152;
+}
+
+#canvasContainer.paper-legal {
+  max-width: 520px;
+  aspect-ratio: 216 / 356;
+}
+
+/* Canvas Touch Lock Handling:
+   Unlocked -> touch-action: none (drag & resize photos/text/signatures freely)
+   Locked   -> touch-action: pan-y (scroll page safely without moving items) */
+#kioskCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+
+#kioskCanvas:active {
+  cursor: grabbing;
+}
+
+#kioskCanvas.canvas-locked {
+  touch-action: pan-y !important;
+  cursor: default !important;
+}
+
+/* ==================== 3. TRANSPARENT SIGNATURE CHECKERBOARD ==================== */
+.checkerboard-bg {
+  background-color: #ffffff;
+  background-image: 
+    linear-gradient(45deg, #e2e8f0 25%, transparent 25%), 
+    linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), 
+    linear-gradient(45deg, transparent 75%, #e2e8f0 75%), 
+    linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+
+/* ==================== 4. 2-STEP LOCKED CROPPER.JS CUSTOMIZATION ==================== */
+.cropper-view-box {
+  outline: 2px solid #2563eb !important;
+  outline-color: rgba(37, 99, 235, 0.9) !important;
+}
+
+.cropper-line {
+  background-color: #2563eb !important;
+}
+
+.cropper-point {
+  background-color: #2563eb !important;
+  width: 14px !important;
+  height: 14px !important;
+  opacity: 1 !important;
+  border: 2px solid #ffffff !important;
+  border-radius: 50% !important;
+}
+
+/* Extra-large blue corner points for easy finger dragging while background image stays locked */
+.cropper-point.point-ne,
+.cropper-point.point-nw,
+.cropper-point.point-se,
+.cropper-point.point-sw {
+  width: 22px !important;
+  height: 22px !important;
+  background-color: #1d4ed8 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+.cropper-modal {
+  opacity: 0.75 !important;
+  background-color: #020617 !important;
+}
+
+/* ==================== 5. DEDICATED PDF STUDIO WINDOW STYLING ==================== */
+.pdf-page-card {
+  background-color: #0f172a;
+  border: 2px solid #334155;
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.18s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.pdf-page-card:hover {
+  border-color: #64748b;
+  transform: translateY(-2px);
+}
+
+.pdf-page-card.selected-pdf-page {
+  border-color: #10b981 !important;
+  background-color: #064e3b33 !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.35), 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+.pdf-thumb-wrapper {
+  background-color: #1e293b;
+  aspect-ratio: 210 / 297;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  padding: 8px;
+}
+
+.pdf-thumb-wrapper img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  background: #ffffff;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* ==================== 6. ACTIVE LAYOUT & PRINT MODE HIGHLIGHTS ==================== */
+.layout-btn.active-layout {
+  border-color: #4f46e5 !important;
+  background-color: #eef2ff !important;
+  color: #1e1b4b !important;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+}
+
+.print-mode-card.active-mode {
+  border-color: #4f46e5 !important;
+  background-color: #eef2ff !important;
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.16);
+}
+
+/* ==================== 7. CUSTOM RANGE SLIDERS & SCROLLBARS ==================== */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #4f46e5;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+
+/* Clean Scrollbars for PDF Studio & Queue Modal */
+#pdfStudioWindow ::-webkit-scrollbar,
+#queueListContainer::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+#pdfStudioWindow ::-webkit-scrollbar-thumb,
+#queueListContainer::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 9999px;
+}
+
+/* ==================== 8. DIRECT PRINT (@media print) RULES ==================== */
+#directPrintMount {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 0;
+  }
+
+  body {
+    background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide all UI sections & modals during direct printing */
+  header,
+  main,
+  #pdfStudioWindow,
+  #textToolModal,
+  #queueModal,
+  #cropModal,
+  #signatureModal,
+  #liveCameraModal,
+  #fullscreenPreviewModal,
+  #settingsModal,
+  #loadingOverlay {
+    display: none !important;
+  }
+
+  #directPrintMount {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .printable-page-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .printable-page-img:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+}
