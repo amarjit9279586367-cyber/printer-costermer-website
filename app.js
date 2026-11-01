@@ -3,11 +3,9 @@
  * Backend Sync, Live Daily Token, IndexedDB Auto-Save, Shopkeeper Live Queue,
  * Dynamic UPI Payment QR Code, PDF/JPG/Print Exports & Editable WhatsApp Link
  * ============================================================================ */
-const BACKEND_URL = "https://printerbeckrnd.onrender.com";
 
-// 👇 यहाँ अपना 10 अंकों का परमानेंट WhatsApp नंबर लिखें (जैसे "9876543210")
-const PERMANENT_SHOP_WHATSAPP = "7858822071";
-const PERMANENT_SHOP_UPI = "7091745731@ybl"; // अगर UPI ID है तो डालें, वरना खाली छोड़ दें
+// ==================== 1. BACKEND CONNECTION VARIABLE ====================
+const BACKEND_URL = "https://printerbeckrnd.onrender.com";
 
 (function () {
   "use strict";
@@ -21,8 +19,8 @@ const PERMANENT_SHOP_UPI = "7091745731@ybl"; // अगर UPI ID है तो �
   const IDB_SESSION_KEY = "active_kiosk_state";
 
   let shopSettings = {
-    whatsappNumber: PERMANENT_SHOP_WHATSAPP,
-    upiId: PERMANENT_SHOP_UPI,
+    whatsappNumber: "",
+    upiId: "",
     colorRate: 20,
     bwRate: 10
   };
@@ -34,8 +32,8 @@ const PERMANENT_SHOP_UPI = "7091745731@ybl"; // अगर UPI ID है तो �
       const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        shopSettings.whatsappNumber = parsed.whatsappNumber || PERMANENT_SHOP_WHATSAPP;
-        shopSettings.upiId = parsed.upiId || PERMANENT_SHOP_UPI;
+        shopSettings.whatsappNumber = parsed.whatsappNumber || "";
+        shopSettings.upiId = parsed.upiId || "";
         shopSettings.colorRate = Number(parsed.colorRate) || 20;
         shopSettings.bwRate = Number(parsed.bwRate) || 10;
       }
@@ -43,7 +41,7 @@ const PERMANENT_SHOP_UPI = "7091745731@ybl"; // अगर UPI ID है तो �
       console.warn("Could not read shop settings:", e);
     }
     syncShopSettingsToUI();
-  } }
+  }
 
   function saveShopSettings() {
     const wpInput = document.getElementById("shopkeeperWhatsappInput");
@@ -627,7 +625,7 @@ const PERMANENT_SHOP_UPI = "7091745731@ybl"; // अगर UPI ID है तो �
     }
   }
 
- // ==================== 9. SEND WHATSAPP PRINT WITH EDITABLE TOKEN LINK (FAST MODE) ====================
+  // ==================== 9. SEND WHATSAPP PRINT WITH EDITABLE TOKEN LINK ====================
   async function handleSendWhatsAppPrint() {
     const hasAnyItem = window.KioskState.pages.some((p) => p.items && p.items.length > 0);
     if (!hasAnyItem) {
@@ -640,22 +638,15 @@ const PERMANENT_SHOP_UPI = "7091745731@ybl"; // अगर UPI ID है तो �
     const { pageCount, copies, total } = calculateTotalPrice();
     const modeLabel = window.KioskState.colorMode === "bw" ? "ब्लैक & व्हाइट (B&W)" : "कलर प्रिंट (Color)";
 
-    // 1. तुरंत हिंदी आवाज़ चलाएं
+    // (क) Hindi Voice Alert & Download PDF on Customer's Phone
     speakHindiTokenAlert(tokenStr);
+    await generateAndDownloadPDF();
 
-    // 2. भारी डबल फोटो (rawSrc) हटाकर फाइल को 90% हल्का बनाएं ताकि तुरंत सेव हो
-    const slimState = JSON.parse(JSON.stringify(window.KioskState));
-    if (slimState.slots) {
-      if (slimState.slots.front) slimState.slots.front.rawSrc = null;
-      if (slimState.slots.back) slimState.slots.back.rawSrc = null;
-    }
-    if (Array.isArray(slimState.pages)) {
-      slimState.pages.forEach((p) => {
-        if (Array.isArray(p.items)) {
-          p.items.forEach((it) => { it.rawSrc = null; });
-        }
-      });
-    }
+    // (ख) Save complete editable state to Backend
+    const loading = document.getElementById("loadingOverlay");
+    const loadingText = document.getElementById("loadingOverlayText");
+    if (loadingText) loadingText.textContent = `टोकन #${tokenStr} सर्वर पर सेव हो रहा है...`;
+    if (loading) loading.classList.remove("hidden");
 
     const jobPayload = {
       token: tokenStr,
@@ -663,14 +654,13 @@ const PERMANENT_SHOP_UPI = "7091745731@ybl"; // अगर UPI ID है तो �
       customerName,
       totalPrice: total,
       createdAt: new Date().toISOString(),
-      state: slimState
+      state: JSON.parse(JSON.stringify(window.KioskState))
     };
 
-    // 3. बिना रुके बैकग्राउंड में सर्वर पर सेव और PDF डाउनलोड चालू करें (0 सेकंड वेट)
-    saveTokenJobToBackend(tokenStr, jobPayload);
-    generateAndDownloadPDF();
+    await saveTokenJobToBackend(tokenStr, jobPayload);
+    if (loading) loading.classList.add("hidden");
 
-    // 4. तुरंत परमानेंट नंबर पर WhatsApp खोलें!
+    // (ग) Open Shopkeeper's WhatsApp Chat with Direct Editable Link (?token=03)
     const baseFrontendUrl = window.location.origin + window.location.pathname;
     const editableTokenUrl = `${baseFrontendUrl}?token=${tokenStr}`;
 
@@ -688,13 +678,14 @@ const PERMANENT_SHOP_UPI = "7091745731@ybl"; // अगर UPI ID है तो �
     ];
 
     const encodedMsg = encodeURIComponent(messageLines.join("\n"));
-    const shopPhone = (shopSettings.whatsappNumber || PERMANENT_SHOP_WHATSAPP || "").replace(/\D/g, "");
+    const shopPhone = (shopSettings.whatsappNumber || "").replace(/\D/g, "");
     const whatsappUrl = shopPhone.length === 10
       ? `https://wa.me/91${shopPhone}?text=${encodedMsg}`
       : `https://wa.me/?text=${encodedMsg}`;
 
     window.open(whatsappUrl, "_blank");
   }
+
   // ==================== 10. SYNC STATE TO UI & INITIALIZATION ====================
   function syncFullStateToUI() {
     updateTokenBadgeUI();
